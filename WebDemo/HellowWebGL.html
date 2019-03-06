@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ZH-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <link rel="stylesheet" href="./css/common.css">
+  <script type="shader-source" id="vertexShader">
+    // 设置默认精度——中等精度
+    precision mediump float;
+    // 2维度浮点向量，用来接收canvas传来的屏幕坐标
+    attribute vec2 a_Position;
+    // 用来接收canvas 宽高
+    attribute vec2 a_Screen_Size;
+    void main() {
+      // 将屏幕坐标系转化成裁切坐标系
+      vec2 position = (a_Position/a_Screen_Size)*2.0 - 1.0;
+      position = position * vec2(1.0, -1.0);
+      // 声明顶点位置
+      gl_Position = vec4(position, 0, 1);
+      // 绘制点大小
+      gl_PointSize = 10.0;
+    }
+  </script>
+  <script type="shader-source" id="fragmentShader">
+    precision mediump float;
+    // 接收js传过来的RGBA值
+    uniform vec4 u_Color;
+    void main() {
+      // 将普通颜色转化成 WebGL需要表示的方式 [0-255] > [0-1]
+      vec4 color = u_Color / vec4(255, 255, 255, 1);
+      // 设置填充颜色
+      gl_FragColor = color;
+    }
+  </script>
+</head>
+
+<body>
+  <canvas id="canvas">不支持canvas</canvas>
+  <script>
+    let canvas = document.getElementById('canvas');
+    canvas.height = canvas.offsetHeight;
+    canvas.width = canvas.offsetWidth;
+    let gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    // 获得顶点着色器源码
+    let vertexShaderSource = document.getElementById('vertexShader').innerHTML;
+    // 创建顶点着色器对象
+    let vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    // 分配给顶点着色器对象
+    gl.shaderSource(vertexShader, vertexShaderSource);
+    // 编译对象
+    gl.compileShader(vertexShader);
+    // 创建片元着色器
+    // 获取着色器源码
+    let fragmentShaderSource = document.querySelector("#fragmentShader").innerHTML;
+    // 创建片元着色器对象
+    let fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+    // 分配给片元着色器对象
+    gl.shaderSource(fragmentShader, fragmentShaderSource);
+    // 编译对象
+    gl.compileShader(fragmentShader);
+
+    // 创建着色器程序
+    let program = gl.createProgram();
+    // 将顶点着色器程序挂在着色程序上
+    gl.attachShader(program, vertexShader);
+    // 将片元着色器挂在着色程序上
+    gl.attachShader(program, fragmentShader);
+    // 链接着色程序
+    gl.linkProgram(program);
+
+    // WebGL可以链接很多程序
+    gl.useProgram(program); // 使用我们刚创建的programe程序
+
+    const points = [];
+    // 找到顶点着色器的变量 a_Position
+    const a_Position = gl.getAttribLocation(program, 'a_Position');
+    //找到顶点着色器中的变量a_Screen_Size
+    const a_Screen_Size = gl.getAttribLocation(program, 'a_Screen_Size');
+    // 找到片元着色器上的接收变量 u_Color
+    const u_Color = gl.getUniformLocation(program, 'u_Color');
+    //为顶点着色器中的 a_Screen_Size 传递 canvas 的宽高信息
+    gl.vertexAttrib2f(a_Screen_Size, canvas.width, canvas.height);
+    canvas.addEventListener('click', function (e) {
+      e.preventDefault();
+      let color = radomColor()
+      let x = e.clientX;
+      let y = e.clientY;
+      points.push({
+        x,
+        y,
+        color
+      })
+      // 开始绘制
+      // 设置清空颜色 #黑色
+      gl.clearColor(0.0, 0.0, 0.0, 1.0);
+      // 用清空颜色清空画布
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      for (let i = 0; i < points.length; i++) {        
+        color = points[i].color;
+        // 为片元着色器 传递颜色
+        gl.uniform4f(u_Color, color.r, color.g, color.b, color.a);
+        // 为顶点着色器传递 坐标
+        gl.vertexAttrib2f(a_Position, points[i].x, points[i].y);
+        // 绘制点
+        gl.drawArrays(gl.POINTS, 0, 1);
+      }
+    })
+
+    // 开始绘制
+    // 设置清空颜色 #黑色
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    // 用清空颜色清空画布
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    function radomColor() {
+      const r = Math.random() * 255;
+      const g = Math.random() * 255;
+      const b = Math.random() * 255;
+      const a = Math.random() * 1;
+      return {
+        r,
+        g,
+        b,
+        a
+      }
+    }
+  </script>
+</body>
+
+</html>

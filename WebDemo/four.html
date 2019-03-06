@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ZH-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <link rel="stylesheet" href="./css/common.css">
+  <script src="./js/webgl-help.js"></script>
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    let canvas = document.getElementById('canvas');
+    canvas.height = canvas.offsetHeight;
+    canvas.width = canvas.offsetWidth;
+    const gl = getWebGLCanvas(canvas);
+    Promise.all([getShaderFromScript(gl, gl.VERTEX_SHADER, './vert/four.vert'), getShaderFromScript(gl, gl.FRAGMENT_SHADER,
+      './frag/four.frag')]).then(resolve => {
+      const vertexShader = resolve[0];
+      const fragShader = resolve[1];
+      const program = createProgram(gl, vertexShader, fragShader);
+      gl.useProgram(program);
+      gl.clearColor(0.0, 0.0, 0.0, 1.0);
+      runProgram(gl, program);
+    })
+
+    function runProgram(gl, program) {
+      const points = [];
+      const colors = [];
+      const a_Position = gl.getAttribLocation(program, 'a_Position');
+      const a_Screen_Size = gl.getAttribLocation(program, 'a_Screen_Size');
+      const a_Color = gl.getAttribLocation(program, 'a_Color');
+      // 创建&绑定坐标位置缓冲区
+      const positionBuffer = createBuffer(gl, a_Position);
+      // 创建绑定颜色缓冲区
+      const colorBuffer = createBuffer(gl, a_Color, {
+        size: 4,
+        stride: 4 * 4
+      });
+      gl.vertexAttrib2f(a_Screen_Size,canvas.width,canvas.height)
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      canvas.addEventListener('mouseup', e => {
+        e.preventDefault();
+        const x = e.pageX;
+        const y = e.pageY;
+        const color = radomColor();
+        points.push(x, y);
+        colors.push(color.r, color.g, color.b, color.a);
+        console.log(points);
+        console.log(colors);
+        if (points.length % 6 === 0) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW)
+          gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW)
+          render(gl, points);
+        }
+      })
+    }
+
+    function render(gl, points) {
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      const promitiveType = gl.TRIANGLES;
+      const offset = 0;
+      gl.drawArrays(promitiveType, offset, points.length / 2);
+      // gl.drawArrays(gl.POINTS, 0, points.length / 2);
+    }
+  </script>
+</body>
+
+</html>

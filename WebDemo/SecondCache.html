@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ZH-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="./css/common.css">
+  <title>使用缓冲区</title>
+  <!-- <script type="shader-source" id="vertexShader" src="./vert/secondCache.vert"></script>
+  <script type="shader-source" id="fragmentShader" src="./frag/secondCache.frag"></script> -->
+  <script src="./js/webgl-help.js"></script>
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    let canvas = document.querySelector('#canvas');
+    const points = [];
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    let gl = getWebGLCanvas(canvas);
+    Promise.all([getShaderFromScript(gl, gl.VERTEX_SHADER, './vert/secondCache.vert'), getShaderFromScript(gl, gl.FRAGMENT_SHADER,
+      './frag/secondCache.frag')]).then(resolve => {
+      let vertexShader = resolve[0];
+      let fragmentShader = resolve[1];
+      let program = createProgram(gl, vertexShader, fragmentShader);
+      // 使用程序
+      gl.useProgram(program);
+      gl.clearColor(0.0, 0.0, 0.0, 1.0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      runProgram(gl, program);
+    })
+
+    function runProgram(gl, program) {
+      // 查询顶点位置
+      let a_Position = gl.getAttribLocation(program, 'a_Position');
+      // 查找裁切坐标系
+      let a_Screen_Size = gl.getAttribLocation(program, 'a_Screen_Size')
+      // 传递canvas大小
+      gl.vertexAttrib2f(a_Screen_Size, canvas.width, canvas.height);
+      // 查询颜色接受参数
+      let u_Color = gl.getUniformLocation(program, 'u_Color');
+      // 创建坐标缓冲区
+      const buffer = gl.createBuffer();
+      // 绑定缓冲区
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      // buffer options
+      const options = {
+        size: 2, //每次取几个数据
+        type: gl.FLOAT, // 数据类型是浮点型
+        normalize: false, // 是否序列化数据
+        stride: 2*4, // 每次迭代需要移动的数据数 * 每个数据所占内存 到下一个数据开始点
+        offset: 0, // 变量获取数据的缓冲区指向当前绑定buffer;
+      }
+      // 启用 a_Position
+      gl.enableVertexAttribArray(a_Position);
+      // 将a_Position 变量获取数据的缓冲区指向当前缓冲区buffer
+      gl.vertexAttribPointer(a_Position, options.size, options.type, options.normalize, options.stride, options.offset);
+      canvas.addEventListener('click', function (e) {
+        e.preventDefault();
+        const x = e.clientX;
+        const y = e.clientY;
+        points.push(x, y);
+
+        if (points.length % 6 === 0) {
+          let color = radomColor();
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.DYNAMIC_DRAW);
+          gl.uniform4f(u_Color, color.r, color.g, color.b, color.a)
+          render(gl);
+        }
+      });
+    }
+    // 开始绘制
+    function render(gl) {
+      // 清空画布
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      //  类型基本三角形
+      const primitiveType = gl.TRIANGLES;
+      // 从数组顶点开始
+      const offset = 0;
+      gl.drawArrays(primitiveType, offset, points.length / 2)
+    }
+  </script>
+</body>
+
+</html>

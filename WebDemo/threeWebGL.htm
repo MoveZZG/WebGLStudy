@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ZH-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="./css/common.css">
+  <title>绘制线段</title>
+  <script src="./js/webgl-help.js"></script>
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    const canvas = document.querySelector('#canvas');
+    canvas.height = canvas.clientHeight;
+    canvas.width = canvas.clientWidth;
+    const gl = getWebGLCanvas(canvas);
+    Promise.all([getShaderFromScript(gl, gl.VERTEX_SHADER, './vert/three.vert'), getShaderFromScript(gl, gl.FRAGMENT_SHADER,
+      './frag/three.frag')]).then(resolve => {
+      const vertShader = resolve[0];
+      const fragShader = resolve[1];
+      const program = createProgram(gl, vertShader, fragShader);
+      gl.useProgram(program);
+      gl.clearColor(0.0, 0.0, 0.0, 1.0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      runProgram(gl, program);
+    })
+
+    function runProgram(gl, program) {
+      const a_Screen_Size = gl.getAttribLocation(program, 'a_Screen_Size');
+      const a_Position = gl.getAttribLocation(program, 'a_Position');
+      const u_Color = gl.getUniformLocation(program, 'u_Color');
+      gl.vertexAttrib2f(a_Screen_Size, canvas.width, canvas.height);
+      const points = [];
+      const buffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      const bufferOps = {
+        size: 2,
+        type: gl.FLOAT,
+        normalize: false,
+        stride: 2 * 4,
+        offset: 0,
+      }
+      // 启用
+      gl.enableVertexAttribArray(a_Position);
+      // 绑定缓冲区
+      gl.vertexAttribPointer(a_Position, bufferOps.size, bufferOps.type, bufferOps.normalize, bufferOps.stride,
+        bufferOps.offset)
+      canvas.addEventListener('mouseup', e => {
+        e.preventDefault();
+        const x = e.pageX;
+        const y = e.pageY;
+        const color = {
+          r: 0,
+          g: 255,
+          b: 0,
+          a: 1
+        };
+        points.push(x, y);
+        if (points.length > 0) {
+          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.DYNAMIC_DRAW)
+          gl.uniform4f(u_Color, color.r, color.g, color.b, color.a);
+          render(gl, points);
+        }
+      })
+    }
+
+    function render(gl, points) {
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      const promitiveType = gl.LINE_LOOP;
+      const offset = 0;
+      gl.drawArrays(promitiveType,offset,points.length/2);
+      gl.drawArrays(gl.POINTS, offset, points.length/2);
+    }
+  </script>
+</body>
+
+</html>

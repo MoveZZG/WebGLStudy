@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ZH-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="css/common.css">
+  <script src="js/webgl-help.js"></script>
+  <title>构建平面</title>
+</head>
+
+<body>
+  <canvas id="canvas"></canvas>
+  <script>
+    let canvas = document.querySelector('#canvas');
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    // 获取canvas
+    let gl = getWebGLCanvas(canvas);
+    Promise.all([getShaderFromScript(gl, gl.VERTEX_SHADER, './vert/five.vert'), getShaderFromScript(gl, gl.FRAGMENT_SHADER,
+      './frag/five.frag')]).then(reslove => {
+      const vertShader = reslove[0];
+      const fragShader = reslove[1];
+      const program = createProgram(gl, vertShader, fragShader);
+      gl.useProgram(program);
+      gl.clearColor(0.0, 0.0, 0.0, 1.0);
+      runProgram(gl, program);
+    })
+
+    function runProgram(gl, program) {
+      const positions = [
+        // v0
+        30, 30, 255, 255, 0, 1,
+        // v1
+        30, 300, 255, 255, 0, 1,
+        // v2
+        300, 300, 255, 255, 0, 1,
+        // v0
+        30, 30, 0, 255, 0, 1,
+        // v1
+        300, 300, 0, 255, 0, 1,
+        // v2
+        300, 30, 0, 255, 0, 1,
+      ];
+      const a_Position = gl.getAttribLocation(program, 'a_Position');      
+      const a_Screen_Size = gl.getAttribLocation(program, 'a_Screen_Size');
+      const a_Color = gl.getAttribLocation(program, 'a_Color');
+      gl.vertexAttrib2f(a_Screen_Size, canvas.width, canvas.height);
+      gl.enableVertexAttribArray(a_Position);
+      gl.enableVertexAttribArray(a_Color);
+      const buffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      // 一次取出 6个元素
+      gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, 24, 0);
+      gl.vertexAttribPointer(a_Color, 4, gl.FLOAT, false, 24, 8);
+      console.log(positions);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW)
+      render(gl, positions)
+    }
+
+    function render(gl, positions) {
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      const promitiveType = gl.TRIANGLES;
+      gl.drawArrays(promitiveType, 0, positions.length/6);
+    }
+  </script>
+</body>
+
+</html>
